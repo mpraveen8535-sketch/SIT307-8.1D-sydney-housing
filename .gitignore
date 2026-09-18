@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.streamlit/
+figures/
+
+# report is submitted via OnTrack; added here only after the repo URL is baked in
+SIT307_8.1D_Report.pdf
