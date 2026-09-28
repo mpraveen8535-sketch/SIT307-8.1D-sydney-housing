@@ -1,88 +1,37 @@
-# SIT307 8.1D — Sydney Housing Price Prediction and Decision Support System
+# SIT307 8.1D - Sydney housing price prediction
 
-Predicting Sydney house prices across **Blacktown**, **Parramatta** and **Mosman**,
-with a deployed Streamlit application.
+This revised project uses 120 publicly shown sold-property records: 40 each from Blacktown, Parramatta and Mosman. It replaces the earlier generated dataset. The PDF report explains the collection, analysis, model comparison, five largest errors and Streamlit app.
 
-## Contents
+## Files
 
-| File | Description |
-|---|---|
-| `SIT307_8.1D_Sydney_Housing.ipynb` | Full analysis, Parts 1–5, all outputs visible |
-| `SIT307_8.1D_Report.pdf` | The report |
-| `data/sydney_housing.csv` | The dataset — 120 properties, 19 columns |
-| `data/build_dataset.py` | Script that generates the dataset |
-| `app/streamlit_app.py` | The deployed application |
-| `app/model.joblib` | Trained pipeline, written by the notebook |
+- `data/sold_properties.csv`: property records and a source URL for each row. `listing_url` is populated for 115 records; the other five retain their `results_page_url`.
+- `SIT307_8.1D_Sydney_Housing.ipynb`: executed analysis notebook with visible outputs. It regenerates the charts, cross-validation tables and final model.
+- `modeling.py`: shared feature builder and model definitions.
+- `app/streamlit_app.py` and `app/model.joblib`: web app and fitted model.
+- `data/example_input.csv`: a three-row batch example.
+- `figures/`: charts, evaluation tables and app screenshots used in the report.
+- `SIT307_8.1D_Revised_Report.pdf`: concise report and use instructions.
 
----
+## Reproduce and run
 
-## ⚠️ The dataset is synthetic
-
-The task asks for a manually collected dataset from realestate.com.au or
-domain.com.au. Those sites block automated access, so the 120 properties here are
-**generated** by `data/build_dataset.py`, calibrated so that suburb medians,
-dwelling mix, dwelling sizes, the 2024–2026 price trend, missingness and outliers
-sit close to publicly reported Sydney figures.
-
-This is disclosed in Part 1.3 of the report and in the notebook, because it limits
-what the results mean. To substitute real collected data, replace
-`data/sydney_housing.csv` with rows using the same column names and re-run the
-notebook — no code change is needed.
-
----
-
-## Setup
+Use Python 3.11 or newer. From this directory:
 
 ```bash
-uv venv --python 3.12 .venv
-uv pip install pandas numpy scikit-learn matplotlib seaborn jupyter streamlit joblib
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+jupyter nbconvert --to notebook --execute --inplace SIT307_8.1D_Sydney_Housing.ipynb
+streamlit run app/streamlit_app.py
 ```
 
-## Run the analysis
+Open the local URL printed by Streamlit. The single-property form accepts a suburb, dwelling type, date, rooms, parking and advertised area. The batch tab accepts a CSV with `suburb`, `property_type_listed`, `bedrooms`, `bathrooms` and `sale_date`; `car_spaces` and `listed_area_sqm` are optional. Use `data/example_input.csv` as a template.
 
-```bash
-.venv/bin/jupyter notebook SIT307_8.1D_Sydney_Housing.ipynb
-```
+The app uses the same saved gradient-boosting pipeline produced by the notebook. Its historical error band is based on five-fold out-of-fold residuals and is approximate, not a formal valuation interval.
 
-Run the cells top to bottom. This reproduces every figure and table in the report
-and writes `app/model.joblib`, which the application loads.
+The report and screenshot scripts are optional. Run `python build_report.py` after the notebook to regenerate the PDF. To recapture app screenshots, install the Playwright browser with `python -m playwright install chromium`, leave Streamlit running, then run `python capture_app.py` in a second terminal. Set `STREAMLIT_URL` if the app is on a port other than 8501.
 
-To regenerate the dataset from scratch first (optional — the CSV is included):
+## Collection and limits
 
-```bash
-cd data && ../.venv/bin/python build_dataset.py && cd ..
-```
+Records were transcribed from realestate.com.au sold result cards visible on 28 September 2026, with sale dates from 26 February to 27 September 2026. Rows with withheld prices and apparent multi-property sales were excluded. Each CSV row keeps an address, price, date and source page. Several listing cards omit parking or area; blanks remain missing and are imputed inside training folds. The displayed area may be land, building or apartment area, so the column is named `listed_area_sqm` rather than claiming one consistent meaning.
 
-## Run the application
-
-```bash
-.venv/bin/streamlit run app/streamlit_app.py
-```
-
-Then open <http://localhost:8501>. The notebook must be run first, since it writes
-the model file the app loads; the app says so clearly if the file is missing.
-
-Enter a property in the sidebar and press **Estimate price**, or use the
-**Batch (CSV upload)** tab to score a whole file.
-
----
-
-## Results
-
-Five-fold cross-validation, trained on `log(sale_price)`, metrics in dollars.
-
-| Model | MAE | MAPE | R² (log) | Train−CV R² gap |
-|---|---|---|---|---|
-| **Ridge regression** ✅ | **$332,832** | **15.2%** | **0.953** | 0.027 |
-| Gradient Boosting | $418,634 | 17.3% | 0.936 | 0.062 |
-| Random Forest | $512,670 | 19.5% | 0.901 | 0.079 |
-
-I predicted the ensembles would win. They did not — with 120 rows and 29 features
-both overfit, and Ridge generalises best. Part 3 of the report covers why,
-including the caveat that the synthetic data's log-additive structure favours the
-linear model.
-
-**Known weaknesses** (Part 4): under-predicts the top of the market by ~14%,
-over-predicts small or compromised dwellings in expensive suburbs, and is
-unreliable in thin segments such as Mosman townhouses. All are surfaced as
-warnings in the app.
+This is a selected sample of public sold results, not a complete or random Sydney transaction register. Its three-suburb scope, uneven dwelling mix and missing amenity, condition and outlook fields limit use beyond a university prototype. For source details and validation discussion, see the report and notebook.
